@@ -1,42 +1,16 @@
 <template>
   <div class="LayoutComposer">
-    <template v-if="!internalEditable">
-      <div class="LayoutComposer__Actions">
-        <a
-          href="#"
-          class="LayoutComposer__ActionButton"
-          @click.prevent="internalEditable = !internalEditable"
-        >
-          Edit
-        </a>
-      </div>
-    </template>
-    <template v-else>
-      <div class="LayoutComposer__Actions">
-        <a
-          href="#"
-          class="LayoutComposer__ActionButton"
-          @click.prevent="
-            internalEditable = !internalEditable
-            buildConfig()
-          "
-        >
-          Save
-        </a>
-      </div>
-    </template>
-
     <Layout
       :cell-props="{
-        id: internalConfig.id,
+        id: configInternal.id,
         dragging,
         layoutOrientation: '',
         isFirstChild: true,
       }"
       :display-components="displayComponents"
-      :initial-config="internalConfig"
-      v-bind="internalConfig.props"
-      :editable="internalEditable"
+      :initial-config="configInternal"
+      v-bind="configInternal.props"
+      :editable="editable"
     />
   </div>
 </template>
@@ -63,21 +37,20 @@ export default {
   data() {
     return {
       dragging: false,
-      internalConfig: {},
-      internalEditable: this.editable,
+      configInternal: {},
     }
   },
   computed: {
     configHumanized: {
       get() {
-        const internalConfigNoIds = _.cloneDeep(this.internalConfig)
-        LayoutUtils.removeIds(internalConfigNoIds)
-        return JSON.stringify(internalConfigNoIds, null, 4)
+        const configInternalNoIds = _.cloneDeep(this.configInternal)
+        LayoutUtils.removeIds(configInternalNoIds)
+        return JSON.stringify(configInternalNoIds, null, 4)
       },
       set(newValue) {
         try {
-          this.internalConfig = JSON.parse(newValue)
-          LayoutUtils.addIds(this.internalConfig)
+          this.configInternal = JSON.parse(newValue)
+          LayoutUtils.addIds(this.configInternal)
         } catch (e) {
           // catch
         }
@@ -85,18 +58,21 @@ export default {
     },
   },
   watch: {
-    internalConfig() {
-      const internalConfigNoIds = _.cloneDeep(this.internalConfig)
-      LayoutUtils.removeIds(internalConfigNoIds)
+    configInternal() {
+      const configInternalNoIds = _.cloneDeep(this.configInternal)
+      LayoutUtils.removeIds(configInternalNoIds)
     },
     config() {
-      this.internalConfig = _.cloneDeep(this.config)
-      LayoutUtils.addIds(this.internalConfig)
+      this.configInternal = _.cloneDeep(this.config)
+      LayoutUtils.addIds(this.configInternal)
+    },
+    editable(newValue) {
+      if (!newValue) this.$emit('change:config', this.$children[0].getConfig())
     },
   },
   created() {
-    this.internalConfig = _.cloneDeep(this.config)
-    LayoutUtils.addIds(this.internalConfig)
+    this.configInternal = _.cloneDeep(this.config)
+    LayoutUtils.addIds(this.configInternal)
   },
   mounted() {
     if (window.documentHasDropListener) return
@@ -109,7 +85,7 @@ export default {
 
     document.addEventListener('dragover', event => {
       event.preventDefault()
-      if (!this.internalEditable) return true
+      if (!this.editable) return true
     })
 
     document.addEventListener('drop', event => {
@@ -117,18 +93,13 @@ export default {
     })
 
     EventBus.$on('global:dragend', () => {
-      if (!this.internalEditable) return false
+      if (!this.editable) return false
       setTimeout(() => {
         this.dragging = false
       }, 100)
     })
 
     window.documentHasDropListener = true
-  },
-  methods: {
-    buildConfig() {
-      this.$emit('change:config', this.$children[0].getConfig())
-    },
   },
 }
 </script>
@@ -138,28 +109,5 @@ export default {
   display: flex;
   width: 100%;
   flex-direction: column;
-}
-
-.LayoutComposer__Actions {
-  display: flex;
-  width: 100%;
-  justify-content: center;
-  border-bottom: 1px solid #e3e3e3;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
-}
-
-.LayoutComposer__ActionButton {
-  align-self: flex-end;
-  margin: 10px;
-  text-decoration: none;
-  color: #007bff;
-  background-color: transparent;
-  background-image: none;
-  border: 1px solid #007bff;
-  padding: 0.5rem 0.75rem;
-  font-size: 1rem;
-  line-height: 1.25;
-  border-radius: 0.25rem;
 }
 </style>
